@@ -127,7 +127,67 @@ declare class GuiSlider extends AceGuiWidgetBase {
     // TODO
 }
 
+declare abstract class AceGuiContainerWidgetBase extends AceGuiWidgetBase {
+    AddChild(widget: GuiWidget, beforeWidget?: GuiWidget): void;
+    SetLayout(layout: "Flow" | "List" | "Fill"): void;
+    SetAutoAdjustHeight(flag: boolean): void;
+    ReleaseChildren(): void;
+    DoLayout(): void;
+    PauseLayout(): void;
+    ResumeLayout(): void;
+}
+
+declare class GuiDropdownGroup extends AceGuiContainerWidgetBase {
+    SetTitle(text: string): void;
+    // TODO
+}
+
+declare class GuiFrame extends AceGuiContainerWidgetBase {
+    SetTitle(text: string): void;
+    SetStatusText(text: string): void;
+    SetStatusTable(table: any): void;
+    ApplyStatus(): void;
+    SetCallback(name: "OnClose", fn: () => void): void;
+    SetCallback(name: "OnEnterStatusBar", fn: () => void): void;
+    SetCallback(name: "OnLeaveStatusBar", fn: () => void): void;
+}
+
+declare class GuiInlineGroup extends AceGuiContainerWidgetBase {
+    SetTitle(text: string): void;
+}
+
+declare class GuiScrollFrame extends AceGuiContainerWidgetBase {
+    SetScroll(val: number): void;
+    SetStatusTable(table: any): void;
+}
+
+declare class GuiSimpleGroup extends AceGuiContainerWidgetBase {
+}
+
+declare class GuiTabGroup extends AceGuiContainerWidgetBase {
+    // TODO
+}
+
+declare class GuiTreeGroup extends AceGuiContainerWidgetBase {
+    // TODO
+}
+
+type GuiWidget =
+    | GuiButton
+    | GuiCheckBox
+    | GuiColorPicker
+    | GuiDropdown
+    | GuiEditBox
+    | GuiHeading
+    | GuiIcon
+    | GuiInteractiveLabel
+    | GuiKeybinding
+    | GuiLabel
+    | GuiMultiLineEditBox
+    | GuiSlider;
+
 declare class AceGuiLibStub {
+    // Regular widgets
     Create(type: "Button"): GuiButton;
     Create(type: "CheckBox"): GuiCheckBox;
     Create(type: "ColorPicker"): GuiColorPicker;
@@ -140,6 +200,15 @@ declare class AceGuiLibStub {
     Create(type: "Label"): GuiLabel;
     Create(type: "MultiLineEditBox"): GuiMultiLineEditBox;
     Create(type: "Slider"): GuiSlider;
+    
+    // Containers
+    Create(type: "DropdownGroup"): GuiDropdownGroup;
+    Create(type: "Frame"): GuiFrame;
+    Create(type: "InlineGroup"): GuiInlineGroup;
+    Create(type: "ScrollFrame"): GuiScrollFrame;
+    Create(type: "SimpleGroup"): GuiSimpleGroup;
+    Create(type: "TabGroup"): GuiTabGroup;
+    Create(type: "TreeGroup"): GuiTreeGroup;
 }
 
 declare class AceConfigCmdLibStub {
