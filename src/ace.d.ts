@@ -28,6 +28,13 @@ declare class AceAddonLibStub {
     NewAddon(addonName: string, ...libNames: AceLibraryName[]): AceAddon;
 }
 
+type AddonChannelId = "PARTY" | "RAID" | "GUILD" | "OFFICER" | "BATTLEGROUND";
+declare class AceCommLibStub {
+    RegisterComm(prefix: string, methodName: string): void;
+    SendCommMessage(prefix: string, text: string, distribution: AddonChannelId): void;
+    SendCommMessage(prefix: string, text: string, distribution: "WHISPER", target: string): void;
+}
+
 declare class AceLocaleLibStub {
     GetLocale<TLocaleTable>(addonName: string, silent?: boolean): TLocaleTable;
     NewLocale<TLocaleTable>(addonName: string, localeName: string, isDefault: boolean, silent?: boolean | 'raw'): TLocaleTable;
@@ -353,10 +360,18 @@ declare class AceConfigRegistryLibStub {
     RegisterOptionsTable(addonName: string, table: GroupOption): void;
 }
 
+declare class AceSerializerLibStub {
+    /** @tupleReturn */
+    Deserialize(str: string): [true, ...unknown[]] | [false, string];
+    Serialize(val: unknown): string;
+}
+
 declare const LibStub: <T extends AceLibraryName>(this: void, name: T) =>
     T extends "AceAddon-3.0" ? AceAddonLibStub :
+    T extends "AceComm-3.0" ? AceCommLibStub :
     T extends "AceLocale-3.0" ? AceLocaleLibStub :
     T extends "AceGUI-3.0" ? AceGuiLibStub :
     T extends "AceConfigCmd-3.0" ? AceConfigCmdLibStub :
     T extends "AceConfigRegistry-3.0" ? AceConfigRegistryLibStub :
+    T extends "AceSerializer-3.0" ? AceSerializerLibStub :
     never;
