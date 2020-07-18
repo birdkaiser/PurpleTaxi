@@ -1,0 +1,18 @@
+{
+  "name": "purpletaxi",
+  "version": "0.0.1",
+  "description": "",
+  "scripts": {
+    "build": "tstl",
+    "deploy": "@powershell -NoProfile -ExecutionPolicy Unrestricted -Command ./deploy.ps1",
+    "dev": "tstl --watch",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT",
+  "private": true,
+  "devDependencies": {
+    "@wartoshika/wow-classic-declarations": "^1.13.3-release.1",
+    "typescript-to-lua": "^0.35.0"
+  }
+}

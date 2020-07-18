@@ -1,0 +1,16 @@
+{
+    "compilerOptions": {
+      "target": "esnext",
+      "lib": ["esnext"],
+      "moduleResolution": "node",
+      "types": [],
+      "strict": true,
+      "rootDir": "src"
+    },
+    "tstl": {
+      "luaTarget": "JIT",
+      "luaBundle": "build/PurpleTaxi.lua",
+      "luaBundleEntry": "src/index.ts",
+      "luaLibImport": "inline"
+    }
+  }
