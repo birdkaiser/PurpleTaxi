@@ -15,5 +15,6 @@ const translations: PurpleTaxiTranslationKeys = {
     StopServiceButtonText: "Stop Service",
     CurrentlyServicing: (x, y) => `You are currently servicing summon requests for ${y} (${x}).`,
     NotInService: "You are not currently servicing summon requests.",
+    DestinationsHeadingText: "Destinations",
 };
 buildLocale(translations, "enUS", true);

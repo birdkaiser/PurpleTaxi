@@ -14,4 +14,5 @@ interface PurpleTaxiTranslationKeys {
     StopServiceButtonText: string;
     CurrentlyServicing: (zone: string, subZone: string) => string;
     NotInService: string;
+    DestinationsHeadingText: string;
 }

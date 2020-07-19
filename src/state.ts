@@ -136,7 +136,7 @@ interface MainWindowStateOptions {
 class MainWindowState {
     private options: MainWindowStateOptions;
     private mainWindowFrame: GuiFrame;
-    private destinationsScrollFrame: GuiScrollFrame;
+    private destinationsContainer: AceGuiContainerWidgetBase;
     private destinations: { [k in string]: MainWindowDestination; };
     private debug: DebugFn;
     private serviceUi: ServiceUi | null;
@@ -161,18 +161,17 @@ class MainWindowState {
             this.serviceUi = null;
         }
 
-        const destinationsGroup = AceGUI.Create("InlineGroup");
+        const destinationsHeading = AceGUI.Create("Heading");
+        mainWindowFrame.AddChild(destinationsHeading);
+        destinationsHeading.SetFullWidth(true);
+        destinationsHeading.SetText(L.DestinationsHeadingText);
+
+        const destinationsGroup = AceGUI.Create("SimpleGroup");
         mainWindowFrame.AddChild(destinationsGroup);
         destinationsGroup.SetFullWidth(true);
         destinationsGroup.SetFullHeight(true);
-        destinationsGroup.SetLayout("Fill");
-
-        const destinationsScrollFrame = AceGUI.Create("ScrollFrame");
-        destinationsGroup.AddChild(destinationsScrollFrame);
-        destinationsScrollFrame.SetLayout("Flow");
-        destinationsScrollFrame.SetFullWidth(true);
-        destinationsScrollFrame.SetFullHeight(true);
-        this.destinationsScrollFrame = destinationsScrollFrame;
+        destinationsGroup.SetLayout("List");
+        this.destinationsContainer = destinationsGroup;
 
         this.destinations = {};
     }
@@ -183,42 +182,57 @@ class MainWindowState {
     }
 
     public updateDestinations(destinations: { [k in string] : Destination; }) {
-        // Add GUI destinations that the state has added, and update the ones that have changed.
+        this.destinationsContainer.ReleaseChildren();
+
         for (const destinationName in destinations) {
-            const dest = destinations[destinationName];
-            const guiDest = this.destinations[destinationName];
-            if (guiDest) {                
-                // Update GUI destination
-                this.debug(`Updating destination: ${destinationName}`);
-            } else {
-                // There was no match, so we have to add a new GUI destination.
-                this.debug(`Adding destination: ${destinationName}`);
+            const inlineGroup = AceGUI.Create("InlineGroup");
+            this.destinationsContainer.AddChild(inlineGroup);
+            inlineGroup.SetFullWidth(true);
+            inlineGroup.SetLayout("List");
 
-                const inlineGroup = AceGUI.Create("InlineGroup");
-                this.destinationsScrollFrame.AddChild(inlineGroup);
-                inlineGroup.SetFullWidth(true);
-                inlineGroup.SetLayout("List");
-
-                const label = AceGUI.Create("Label");
-                inlineGroup.AddChild(label);
-                label.SetFullWidth(true);
-                label.SetText(destinationName);
-
-                this.destinations[destinationName] = {
-                    group: inlineGroup,
-                };
-            }
+            const label = AceGUI.Create("Label");
+            inlineGroup.AddChild(label);
+            label.SetFullWidth(true);
+            label.SetText(destinationName);
         }
+        // // Add GUI destinations that the state has added, and update the ones that have changed.
+        // for (const destinationName in destinations) {
+        //     const dest = destinations[destinationName];
+        //     const guiDest = this.destinations[destinationName];
+        //     if (guiDest) {                
+        //         // Update GUI destination
+        //         this.debug(`Updating destination: ${destinationName}`);
+        //     } else {
+        //         // There was no match, so we have to add a new GUI destination.
+        //         this.debug(`Adding destination: ${destinationName}`);
 
-        // Remove GUI destinations that are no longer supported by the state.
-        for (const destinationName in this.destinations) {
-            const dest = destinations[destinationName];
-            if (!dest) {
-                this.debug(`Removing destination: ${destinationName}`);
-                this.destinations[destinationName].group.Release();
-                delete this.destinations[destinationName];
-            }
-        }
+        //         const inlineGroup = AceGUI.Create("InlineGroup");
+        //         this.destinationsContainer.AddChild(inlineGroup);
+        //         inlineGroup.SetFullWidth(true);
+        //         inlineGroup.SetLayout("List");
+
+        //         const label = AceGUI.Create("Label");
+        //         inlineGroup.AddChild(label);
+        //         label.SetFullWidth(true);
+        //         label.SetText(destinationName);
+
+        //         this.destinations[destinationName] = {
+        //             group: inlineGroup,
+        //         };
+        //     }
+        // }
+
+        // // Remove GUI destinations that are no longer supported by the state.
+        // for (const destinationName in this.destinations) {
+        //     const dest = destinations[destinationName];
+        //     if (!dest) {
+        //         this.debug(`Removing destination: ${destinationName}`);
+        //         this.destinations[destinationName].group.Release();
+        //         delete this.destinations[destinationName];
+        //     }
+        // }
+
+        // this.destinationsContainer.DoLayout();
     }
 }
 
