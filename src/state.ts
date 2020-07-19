@@ -1,11 +1,13 @@
 import * as wow from "@wartoshika/wow-classic-declarations";
-import { DispatchMessageFn } from "./messages";
+import { DispatchMessageFn, Message, ServiceAvailableMessage, ServiceStoppedMessage } from "./messages";
 const AceGUI = LibStub("AceGUI-3.0");
 const L = LibStub("AceLocale-3.0").GetLocale<PurpleTaxiTranslationKeys>("PurpleTaxi", true);
 
 // TODO: These typings are missing from wow-classic-declarations.
 declare function GetRealZoneText(): string;
 declare function GetSubZoneText(): string;
+
+type DebugFn = (msg: string) => void
 
 interface ServiceUiOptions {
     readonly notifyServiceAvailable: (notice: ServiceAvailabilityNotice) => void;
@@ -80,18 +82,37 @@ class ServiceUi {
     }
 }
 
-interface Summoner {
+interface SummonerBase {
     readonly characterName: string;
+    realZoneText: string;
+    subZoneText: string;
 }
 
-interface Warlock extends Summoner {
+interface Clicker extends SummonerBase {
+    readonly type: "clicker";
+}
+
+interface Warlock extends SummonerBase {
+    readonly type: "warlock";
     soulShardsRemaining: number;
 }
 
+type Summoner = Clicker | Warlock;
+
+interface DestinationWarlock {
+    readonly characterName: string;
+    soulShardsRemaining: number;
+}
+
+interface DestinationClicker {
+    readonly characterName: string;
+}
+
 interface Destination {
-    readonly realZoneText: string;
-    readonly subZoneText: string;
-    readonly summoners: Summoner[];
+    realZoneText: string;
+    subZoneText: string;
+    warlocks: DestinationWarlock[];
+    clickers: DestinationClicker[];
 }
 
 interface ServiceAvailabilityNotice {
@@ -100,24 +121,34 @@ interface ServiceAvailabilityNotice {
     readonly soulShardsRemaining: number;
 }
 
+interface MainWindowDestination {
+    readonly group: GuiInlineGroup;
+}
+
 interface MainWindowStateOptions {
     readonly didClose: () => void;
     readonly notifyServiceAvailable: (notice: ServiceAvailabilityNotice) => void;
     readonly notifyServiceStopped: () => void;
+    readonly debug: DebugFn;
     readonly isWarlockWithSummonSpell: boolean;
 }
 
 class MainWindowState {
     private options: MainWindowStateOptions;
     private mainWindowFrame: GuiFrame;
+    private destinationsScrollFrame: GuiScrollFrame;
+    private destinations: { [k in string]: MainWindowDestination; };
+    private debug: DebugFn;
     private serviceUi: ServiceUi | null;
 
     constructor(options: MainWindowStateOptions) {
         this.options = options;
+        this.debug = options.debug;
 
         const mainWindowFrame = AceGUI.Create("Frame");
         mainWindowFrame.SetTitle("Purple Taxi");
         mainWindowFrame.SetCallback("OnClose", () => { this.releaseMainWindow(); });
+        mainWindowFrame.SetLayout("List");
         this.mainWindowFrame = mainWindowFrame;
 
         if (options.isWarlockWithSummonSpell) {
@@ -129,16 +160,71 @@ class MainWindowState {
         } else {
             this.serviceUi = null;
         }
+
+        const destinationsGroup = AceGUI.Create("InlineGroup");
+        mainWindowFrame.AddChild(destinationsGroup);
+        destinationsGroup.SetFullWidth(true);
+        destinationsGroup.SetFullHeight(true);
+        destinationsGroup.SetLayout("Fill");
+
+        const destinationsScrollFrame = AceGUI.Create("ScrollFrame");
+        destinationsGroup.AddChild(destinationsScrollFrame);
+        destinationsScrollFrame.SetLayout("Flow");
+        destinationsScrollFrame.SetFullWidth(true);
+        destinationsScrollFrame.SetFullHeight(true);
+        this.destinationsScrollFrame = destinationsScrollFrame;
+
+        this.destinations = {};
     }
 
     public releaseMainWindow() {
         this.mainWindowFrame.Release();
         this.options.didClose();
     }
+
+    public updateDestinations(destinations: { [k in string] : Destination; }) {
+        // Add GUI destinations that the state has added, and update the ones that have changed.
+        for (const destinationName in destinations) {
+            const dest = destinations[destinationName];
+            const guiDest = this.destinations[destinationName];
+            if (guiDest) {                
+                // Update GUI destination
+                this.debug(`Updating destination: ${destinationName}`);
+            } else {
+                // There was no match, so we have to add a new GUI destination.
+                this.debug(`Adding destination: ${destinationName}`);
+
+                const inlineGroup = AceGUI.Create("InlineGroup");
+                this.destinationsScrollFrame.AddChild(inlineGroup);
+                inlineGroup.SetFullWidth(true);
+                inlineGroup.SetLayout("List");
+
+                const label = AceGUI.Create("Label");
+                inlineGroup.AddChild(label);
+                label.SetFullWidth(true);
+                label.SetText(destinationName);
+
+                this.destinations[destinationName] = {
+                    group: inlineGroup,
+                };
+            }
+        }
+
+        // Remove GUI destinations that are no longer supported by the state.
+        for (const destinationName in this.destinations) {
+            const dest = destinations[destinationName];
+            if (!dest) {
+                this.debug(`Removing destination: ${destinationName}`);
+                this.destinations[destinationName].group.Release();
+                delete this.destinations[destinationName];
+            }
+        }
+    }
 }
 
 export interface StateOptions {
     readonly dispatchMessage: DispatchMessageFn;
+    readonly debug: DebugFn;
 }
 
 export class State {
@@ -146,6 +232,8 @@ export class State {
     private options: StateOptions;
     private isWarlockWithSummonSpell: boolean;
     private characterName: string;
+    private debug: DebugFn;
+    private summonersInService: { [k in string]: Summoner; };
 
     constructor(options: StateOptions) {
         this.options = options;
@@ -155,6 +243,9 @@ export class State {
         this.characterName = GetUnitName("player", false);
 
         this.isWarlockWithSummonSpell = (englishClass == "WARLOCK" && UnitLevel("player") >= 20);
+
+        this.debug = options.debug;
+        this.summonersInService = {};
     }
 
     public toggleMainWindow() {
@@ -162,6 +253,7 @@ export class State {
             this.mainWindowState.releaseMainWindow();
         } else {
             this.mainWindowState = new MainWindowState({
+                debug: this.debug,
                 didClose: () => {
                     this.mainWindowState = null;
                 },
@@ -182,6 +274,87 @@ export class State {
                     });
                 },
             });
+        }
+    }
+
+    public handleMessage(msg: Message): boolean {
+        if (msg.type === "serviceAvailable") {
+            this.handleServiceAvailableMessage(msg);
+        } else if (msg.type === "serviceStopped") {
+            this.handleServiceStoppedMessage(msg);
+        } else {
+            return false;
+        }
+        return true;
+    }
+
+    private handleServiceAvailableMessage(msg: ServiceAvailableMessage) {
+        this.debug(`${msg.characterName} is summoning to ${msg.subZoneText} (${msg.realZoneText}) with ${msg.soulShardsRemaining} shards remaining.`);
+
+        let summoner = this.summonersInService[msg.characterName];
+        if (!summoner) {
+            this.summonersInService[msg.characterName] = summoner = {
+                type: "warlock",
+                characterName: msg.characterName,
+                realZoneText: msg.realZoneText,
+                subZoneText: msg.subZoneText,
+                soulShardsRemaining: msg.soulShardsRemaining,
+            };
+            this.updateSummonersUi();
+        } else if (summoner.realZoneText !== msg.realZoneText || summoner.subZoneText !== msg.subZoneText || (summoner.type === 'warlock' && summoner.soulShardsRemaining !== msg.soulShardsRemaining)) {
+            summoner.realZoneText = msg.realZoneText;
+            summoner.subZoneText = msg.subZoneText;
+
+            if (summoner.type === 'warlock') {
+                summoner.soulShardsRemaining = msg.soulShardsRemaining;
+            }
+
+            this.updateSummonersUi();
+        }
+    }
+
+    private handleServiceStoppedMessage(msg: ServiceStoppedMessage) {
+        this.debug(`${msg.characterName} is no longer summoning.`);
+
+        const summoner = this.summonersInService[msg.characterName];
+        if (summoner) {
+            this.debug(`Removing summoner: ${msg.characterName}`);
+            delete this.summonersInService[msg.characterName];
+            this.updateSummonersUi();
+        }
+    }
+
+    private updateSummonersUi() {
+        if (this.mainWindowState) {
+            const destinations: { [k in string]: Destination; } = {};
+            for (const k in this.summonersInService) {
+                const summoner = this.summonersInService[k];
+                const destinationName = summoner.subZoneText === "" ? summoner.realZoneText : `${summoner.subZoneText} (${summoner.realZoneText})`;
+
+                let destination = destinations[destinationName];
+                if (!destination) {
+                    destination = {
+                        realZoneText: summoner.realZoneText,
+                        subZoneText: summoner.subZoneText,
+                        warlocks: [],
+                        clickers: [],
+                    }
+                    destinations[destinationName] = destination;
+                }
+                
+                if (summoner.type === 'warlock') {
+                    destination.warlocks.push({
+                        characterName: summoner.characterName,
+                        soulShardsRemaining: summoner.soulShardsRemaining,
+                    });
+                } else {
+                    destination.clickers.push({
+                        characterName: summoner.characterName,
+                    });
+                }
+            }
+
+            this.mainWindowState.updateDestinations(destinations);
         }
     }
 }

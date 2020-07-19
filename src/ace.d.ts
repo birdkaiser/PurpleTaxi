@@ -362,7 +362,7 @@ declare class AceConfigRegistryLibStub {
 
 declare class AceSerializerLibStub {
     /** @tupleReturn */
-    Deserialize(str: string): [true, ...unknown[]] | [false, string];
+    Deserialize(str: string): [boolean, any];
     Serialize(val: unknown): string;
 }
 

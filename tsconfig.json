@@ -10,7 +10,6 @@
     "tstl": {
       "luaTarget": "JIT",
       "luaBundle": "build/PurpleTaxi.lua",
-      "luaBundleEntry": "src/index.ts",
-      "luaLibImport": "inline"
+      "luaBundleEntry": "src/index.ts"
     }
   }

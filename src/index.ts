@@ -26,7 +26,8 @@ try {
     addon.state = new State({
         dispatchMessage: (distribution: MessageDistribution, msg: Message) => {
             addon.SendComm(distribution, msg);
-        }
+        },
+        debug: (msg) => addon.Debug(msg),
     });
     
     const options: GroupOption = {
@@ -82,7 +83,10 @@ try {
             this.Debug(`Received message from ${sender} over ${channel}: ${message}`);
             const [success, deserialized] = this.Deserialize(message);
             if (success) {
-                this.Debug(`Deserialized: ${deserialized}`);
+                const messageObj = deserialized as Message;
+                if (!this.state.handleMessage(messageObj)) {
+                    this.Debug(`Unhandled message type: ${deserialized.type}`);
+                }
             } else {
                 this.Debug(`Failed to deserialize message: ${deserialized}`);
             }
