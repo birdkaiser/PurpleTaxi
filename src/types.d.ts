@@ -1,9 +1,5 @@
 import "@wartoshika/wow-classic-declarations";
 
-// TODO: These typings are missing from wow-classic-declarations.
-declare function GetRealZoneText(): string;
-declare function GetSubZoneText(): string;
-
 export type DebugFn = (msg: string) => void
 
 export interface Warlock {

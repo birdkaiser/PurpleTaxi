@@ -1,11 +1,13 @@
 interface CTimer {
+    /// https://wow.gamepedia.com/API_C_Timer.After
     After: (this: void, seconds: number, callback: () => void) => void;
+
+    /// https://wow.gamepedia.com/API_C_Timer.NewTicker
     NewTicker: (this: void, seconds: number, callback: () => void) => void;
 }
 
 declare const C_Timer: CTimer;
 
-// https://wow.gamepedia.com/API_GetRaidRosterInfo
 type RaidMemberName = string;
 type RaidMemberRank = 0 | 1 | 2;
 type RaidMemberLevel = number;
@@ -20,5 +22,12 @@ type RaidMemberIsMl = boolean;
 type RaidMemberCombatRole = "DAMAGER" | "TANK" | "HEALER" | "NONE";
 type RaidRosterInfo = [RaidMemberName, RaidMemberRank, RaidMemberSubGroup, RaidMemberLevel, RaidMemberClass, RaidMemberFileName, RaidMemberZone, RaidMemberOnline, RaidMemberIsDead, RaidMemberRole, RaidMemberRole, RaidMemberCombatRole];
 
+/// https://wow.gamepedia.com/API_GetRaidRosterInfo
 /** @tupleReturn */
 declare function GetRaidRosterInfo(this: void, raidIndex: number): RaidRosterInfo;
+
+/// https://wow.gamepedia.com/API_GetRealZoneText
+declare function GetRealZoneText(): string;
+
+/// https://wow.gamepedia.com/API_GetSubZoneText
+declare function GetSubZoneText(): string;

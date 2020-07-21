@@ -54,6 +54,7 @@ function renderDetailsContainer(options: DetailsContainerOptions) {
 
     const clickerNamesText =
         clickers
+            .filter((c) => !warlocks.some(w => w.characterName === c.characterName))
             .map(w => w.characterName)
             .reduce((p, n) => p === "" ? n : `${p}, ${n}`, "");
 

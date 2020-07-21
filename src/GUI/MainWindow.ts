@@ -6,8 +6,8 @@ interface MainWindowStateOptions {
     readonly L: PurpleTaxiTranslationKeys;
     readonly AceGUI: AceGuiLibStub;
     readonly didClose: () => void;
-    readonly notifyServiceAvailable: () => void;
-    readonly notifyServiceStopped: () => void;
+    readonly startService: () => void;
+    readonly stopService: () => void;
     readonly debug: DebugFn;
     readonly isWarlockWithSummonSpell: boolean;
 }
@@ -38,8 +38,8 @@ export class MainWindow {
             this.serviceUi = new ServiceUi({
                 AceGUI,
                 L,
-                notifyServiceAvailable: options.notifyServiceAvailable,
-                notifyServiceStopped: options.notifyServiceStopped,
+                startService: options.startService,
+                stopService: options.stopService,
                 mainWindowFrame,
             });
         } else {

@@ -1,6 +1,6 @@
 import { DispatchMessageFn, Message, ServiceAvailableMessage, ServiceStoppedMessage } from "./messages";
 import { MainWindow } from "./GUI/MainWindow";
-import { DebugFn, Destination, Warlock, GetRealZoneText, GetSubZoneText } from "./types";
+import { DebugFn, Destination, Warlock } from "./types";
 
 export interface StateOptions {
     readonly L: PurpleTaxiTranslationKeys;
@@ -27,6 +27,7 @@ export class State {
     private isWarlockWithSummonSpell: boolean;
     private warlocksInService: { [k in string]: Warlock; };
     private nearbyClickerNames: ReadonlyArray<string>;
+    private isInService: boolean;
 
     constructor(options: StateOptions) {
         // The player's class won't change, so we can discover this once on initialization.
@@ -42,6 +43,7 @@ export class State {
         this.rangeChecker = options.rangeChecker;
         this.warlocksInService = {};
         this.nearbyClickerNames = [];
+        this.isInService = false;
 
         if (this.isWarlockWithSummonSpell) {
             this.startWarlockTicker();
@@ -51,7 +53,9 @@ export class State {
     public startWarlockTicker(): void {
         C_Timer.NewTicker(10, () => {
             try {
-                this.updateNearbyClickers();
+                if (this.updateNearbyClickers()) {
+                    this.sendServiceAvailabilityNotification();
+                }
             } catch (x) {
                 this.debug(x);
             }
@@ -70,10 +74,13 @@ export class State {
                     this.mainWindow = null;
                 },
                 isWarlockWithSummonSpell: this.isWarlockWithSummonSpell,
-                notifyServiceAvailable: () => {
+                startService: () => {
+                    this.isInService = true;
+                    this.updateNearbyClickers();
                     this.sendServiceAvailabilityNotification();
                 },
-                notifyServiceStopped: () => {
+                stopService: () => {
+                    this.isInService = false;
                     this.dispatchMessage(["GUILD"], {
                         type: "serviceStopped",
                         characterName: this.characterName,
@@ -95,40 +102,51 @@ export class State {
         return true;
     }
 
-    private updateNearbyClickers() {
+    private updateNearbyClickers(): boolean {
+        if (!this.isInService) {
+            return false;
+        }
+
         const { characterName, rangeChecker } = this;
         const clickersInRange: string[] = [];
         let i = 0;
         let clickersHaveChanged = false;
+        this.debug(`I am ${characterName}.`);
         while (i < 40) {
             const [raidMemberName, /* rank */, /* grp */, /* level */, /* klass */, /* fileName */, /* zone */, isOnline, isDead] = GetRaidRosterInfo(i + 1);
             if (!raidMemberName) {
                 break;
             }
 
-            if (raidMemberName !== characterName && isOnline && !isDead && rangeChecker(`raid${i+1}`)) {
-                clickersInRange.push(characterName);
-                
-                if (!clickersInRange.some(c => c === raidMemberName)) {
-                    // We didn't know about this clicker before, so we have to send an update.
-                    clickersHaveChanged = true;
-                }
-            } else {
-                if (clickersInRange.some(c => c === raidMemberName)) {
-                    // One of our previously known clickers is no longer in range, so we have to send an update.
-                    clickersHaveChanged = true;
+            if (raidMemberName !== characterName) {
+                // Our own warlock doesn't count as a clicker.
+                if (isOnline && !isDead && rangeChecker(`raid${i+1}`)) {
+                    if (!clickersInRange.some(c => c === raidMemberName)) {
+                        // We didn't know about this clicker before, so we have to send an update.
+                        clickersHaveChanged = true;
+                    }
+                    clickersInRange.push(raidMemberName);
+                } else {
+                    if (clickersInRange.some(c => c === raidMemberName)) {
+                        // One of our previously known clickers is no longer in range, so we have to send an update.
+                        clickersHaveChanged = true;
+                    }
                 }
             }
             i++;
         }
 
+        this.debug(`clickers in range: ${clickersInRange.reduce((p, n) => p === "" ? n : `${p}, ${n}`, "")}`);
+
         if (clickersHaveChanged) {
+            this.debug("updating clickers in range");
             this.nearbyClickerNames = clickersInRange;
-            this.sendServiceAvailabilityNotification();
         }
+
+        return clickersHaveChanged;
     }
 
-    private sendServiceAvailabilityNotification() {
+    private sendServiceAvailabilityNotification(): void {
         // TODO: Watch these values for changes and re-send the notification if they change.
         const realZoneText = GetRealZoneText();
         const subZoneText = GetSubZoneText();
@@ -140,7 +158,7 @@ export class State {
         });
     }
 
-    private dispatchServiceAvailabilityNotification(args: DispatchServiceAvailabilityNotificationArgs) {
+    private dispatchServiceAvailabilityNotification(args: DispatchServiceAvailabilityNotificationArgs): void {
         this.dispatchMessage(["GUILD"], {
             type: "serviceAvailable",
             characterName: this.characterName,
@@ -151,7 +169,7 @@ export class State {
         });
     }
 
-    private handleServiceAvailableMessage(msg: ServiceAvailableMessage) {
+    private handleServiceAvailableMessage(msg: ServiceAvailableMessage): void {
         this.debug(`${msg.characterName} is summoning to ${msg.subZoneText} (${msg.realZoneText}) with ${msg.soulShardsRemaining} shards remaining.`);
 
         let warlock = this.warlocksInService[msg.characterName];
@@ -175,7 +193,7 @@ export class State {
         }
     }
 
-    private handleServiceStoppedMessage(msg: ServiceStoppedMessage) {
+    private handleServiceStoppedMessage(msg: ServiceStoppedMessage): void {
         this.debug(`${msg.characterName} is no longer summoning.`);
 
         const warlock = this.warlocksInService[msg.characterName];
@@ -186,7 +204,7 @@ export class State {
         }
     }
 
-    private updateSummonersUi() {
+    private updateSummonersUi(): void {
         if (this.mainWindow) {
             const destinationsByLocation: { [k in string]: Destination; } = {};
 
@@ -213,7 +231,7 @@ export class State {
                 for (const clicker of warlock.nearbyClickers) {
                     if (!destination.clickers.some(c => c.characterName === clicker)) {
                         destination.clickers.push({
-                            characterName: warlock.characterName,
+                            characterName: clicker,
                         });
                     }
                 }

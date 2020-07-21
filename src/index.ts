@@ -15,49 +15,14 @@ type PurpleTaxiAddon = AceAddon & ExtendedAddon & AceCommLibStub & AceSerializer
 const MessagePrefix = "PTAXI";
 const debugMode = true; // TODO: store this in config.
 
-print("0");
-
 let PurpleTaxi: PurpleTaxiAddon | null = null;
 try {
     const addon = LibStub("AceAddon-3.0").NewAddon("PurpleTaxi", "AceConsole-3.0", "AceComm-3.0", "AceSerializer-3.0") as PurpleTaxiAddon;
     PurpleTaxi = addon;
-
-    print("1");
     
     const L = LibStub("AceLocale-3.0").GetLocale<PurpleTaxiTranslationKeys>("PurpleTaxi", true);
     const AceGUI = LibStub("AceGUI-3.0");
     const RC = LibStub("LibRangeCheck-2.0");
-
-    
-    print("2");
-    
-    addon.state = new State({
-        AceGUI,
-        L,
-        dispatchMessage: (distribution: MessageDistribution, msg: Message) => {
-            addon.SendComm(distribution, msg);
-        },
-        rangeChecker: RC.GetFriendMaxChecker(40),
-        debug: (msg) => addon.Debug(msg),
-    });
-
-    const executeHelp = function() {
-        print(L.OptionHelpPrint);
-    };
-    
-    const options: GroupOption = {
-        name: "PurpleTaxi",
-        type: "group",
-        args: {
-            help: {
-                type: "execute",
-                name: L.OptionHelpName,
-                desc: L.OptionHelpDesc,
-                func: executeHelp,
-                guiHidden: true,
-            },
-        },
-    };
 
     PurpleTaxi.Debug = function(str: string) {
         if (debugMode) {
@@ -74,10 +39,10 @@ try {
                 return;
             }
             if (distribution[0] === "WHISPER") {
-                addon.SendCommMessage(MessagePrefix, serialized, distribution[0], distribution[1]);
+                this.SendCommMessage(MessagePrefix, serialized, distribution[0], distribution[1]);
 
             } else {
-                addon.SendCommMessage(MessagePrefix, serialized, distribution[0]);
+                this.SendCommMessage(MessagePrefix, serialized, distribution[0]);
             }
         } catch (x) {
             this.Debug(x);
@@ -120,6 +85,34 @@ try {
 
     PurpleTaxi.OnInitialize = function() {
         try {
+            this.state = new State({
+                AceGUI,
+                L,
+                dispatchMessage: (distribution: MessageDistribution, msg: Message) => {
+                    this.SendComm(distribution, msg);
+                },
+                rangeChecker: RC.GetFriendMaxChecker(30),
+                debug: (msg) => this.Debug(msg),
+            });
+    
+            const executeHelp = function() {
+                print(L.OptionHelpPrint);
+            };
+            
+            const options: GroupOption = {
+                name: "PurpleTaxi",
+                type: "group",
+                args: {
+                    help: {
+                        type: "execute",
+                        name: L.OptionHelpName,
+                        desc: L.OptionHelpDesc,
+                        func: executeHelp,
+                        guiHidden: true,
+                    },
+                },
+            };
+
             LibStub("AceConfigRegistry-3.0").RegisterOptionsTable("PurpleTaxi", options);
             this.RegisterChatCommand("taxi", "ProcessSlashCommand");
             this.RegisterChatCommand("purpletaxi", "ProcessSlashCommand");
@@ -146,6 +139,10 @@ try {
             this.Debug(x);
         }
     };
+    
+    if (debugMode) {
+        print("Loaded PurpleTaxi script.");
+    }
 } catch (x) {
     if (debugMode) {
         print(x);

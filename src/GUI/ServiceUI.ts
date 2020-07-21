@@ -1,10 +1,8 @@
-import { GetRealZoneText, GetSubZoneText } from "../types";
-
 export interface ServiceUiOptions {
     readonly L: PurpleTaxiTranslationKeys;
     readonly AceGUI: AceGuiLibStub;
-    readonly notifyServiceAvailable: () => void;
-    readonly notifyServiceStopped: () => void;
+    readonly startService: () => void;
+    readonly stopService: () => void;
     readonly mainWindowFrame: GuiFrame;
 }
 
@@ -14,14 +12,14 @@ export class ServiceUi {
     private subZoneText: string;
     private serviceLabel: GuiLabel;
     private toggleServiceButton: GuiButton;
-    private readonly notifyServiceAvailable: () => void;
-    private readonly notifyServiceStopped: () => void;
+    private readonly startService: () => void;
+    private readonly stopService: () => void;
     private readonly L: PurpleTaxiTranslationKeys;
 
     constructor(options: ServiceUiOptions) {
-        const { AceGUI, L, notifyServiceAvailable, notifyServiceStopped } = options;
-        this.notifyServiceAvailable = notifyServiceAvailable;
-        this.notifyServiceStopped = notifyServiceStopped;
+        const { AceGUI, L, startService, stopService } = options;
+        this.startService = startService;
+        this.stopService = stopService;
         this.L = L;
 
         const group = AceGUI.Create("InlineGroup");
@@ -38,9 +36,9 @@ export class ServiceUi {
         toggleServiceButton.SetWidth(200);
         toggleServiceButton.SetCallback("OnClick", () => {
             if (this.inService) {
-                this.stopService();
+                this.doStopService();
             } else {
-                this.startService();
+                this.doStartService();
             }
         });
         this.toggleServiceButton = toggleServiceButton;
@@ -51,16 +49,16 @@ export class ServiceUi {
         this.updateGui();
     }
 
-    public startService(): void {
+    public doStartService(): void {
         this.inService = true;
         this.updateGui();
-        this.notifyServiceAvailable();
+        this.startService();
     }
 
-    public stopService(): void {
+    public doStopService(): void {
         this.inService = false;
         this.updateGui();
-        this.notifyServiceStopped();
+        this.stopService();
     }
 
     public updateGui(): void {
