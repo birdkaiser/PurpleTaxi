@@ -9,9 +9,10 @@ interface ExtendedAddon {
     OnCommReceived(arg1: string, arg2: string, arg3: string, arg4: string, arg5: string): void;
     ProcessSlashCommand(input: string): void;
     Debug(str: string): void;
+    RangeCheckersChanged(): void;
 }
 
-type PurpleTaxiAddon = AceAddon & ExtendedAddon & AceCommLibStub & AceSerializerLibStub;
+type PurpleTaxiAddon = AceAddon & ExtendedAddon & AceCommLibStub & AceSerializerLibStub & LibRangeCheckLibStub;
 
 const MessagePrefix: string = "PTAXI";
 const debugMode: boolean = true; // TODO: store this in config.
@@ -22,11 +23,13 @@ try {
     PurpleTaxi = addon;
     
     const L = LibStub("AceLocale-3.0").GetLocale<PurpleTaxiTranslationKeys>("PurpleTaxi", true);
+    const RC = LibStub("LibRangeCheck-2.0");
     
     addon.state = new State({
         dispatchMessage: (distribution: MessageDistribution, msg: Message) => {
             addon.SendComm(distribution, msg);
         },
+        rangeChecker: RC.GetFriendMaxChecker(30),
         debug: (msg) => addon.Debug(msg),
     });
     
@@ -52,6 +55,10 @@ try {
         if (debugMode) {
             this.Print(str);
         }
+    }
+
+    PurpleTaxi.RangeCheckersChanged = function() {
+        this.Debug("Range checkers changed.");
     }
 
     PurpleTaxi.SendComm = function(distribution: MessageDistribution, msg: Message) {
@@ -106,7 +113,7 @@ try {
             this.Debug(x);
         }
     }
-    
+
     PurpleTaxi.OnInitialize = function() {
         try {
             LibStub("AceConfigRegistry-3.0").RegisterOptionsTable("PurpleTaxi", options);

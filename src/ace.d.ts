@@ -1,4 +1,4 @@
-type AceLibraryName =
+type MixinName =
     | "AceAddon-3.0"
     | "AceBucket-3.0"
     | "AceComm-3.0"
@@ -25,7 +25,7 @@ declare class AceAddon {
 }
 
 declare class AceAddonLibStub {
-    NewAddon(addonName: string, ...libNames: AceLibraryName[]): AceAddon;
+    NewAddon(addonName: string, ...libNames: MixinName[]): AceAddon;
 }
 
 type AddonChannelId = "PARTY" | "RAID" | "GUILD" | "OFFICER" | "BATTLEGROUND";
@@ -365,13 +365,3 @@ declare class AceSerializerLibStub {
     Deserialize(str: string): [boolean, any];
     Serialize(val: unknown): string;
 }
-
-declare const LibStub: <T extends AceLibraryName>(this: void, name: T) =>
-    T extends "AceAddon-3.0" ? AceAddonLibStub :
-    T extends "AceComm-3.0" ? AceCommLibStub :
-    T extends "AceLocale-3.0" ? AceLocaleLibStub :
-    T extends "AceGUI-3.0" ? AceGuiLibStub :
-    T extends "AceConfigCmd-3.0" ? AceConfigCmdLibStub :
-    T extends "AceConfigRegistry-3.0" ? AceConfigRegistryLibStub :
-    T extends "AceSerializer-3.0" ? AceSerializerLibStub :
-    never;

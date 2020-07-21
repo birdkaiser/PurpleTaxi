@@ -16,5 +16,7 @@ const translations: PurpleTaxiTranslationKeys = {
     CurrentlyServicing: (x, y) => `You are currently servicing summon requests for ${y} (${x}).`,
     NotInService: "You are not currently servicing summon requests.",
     DestinationsHeadingText: "Destinations",
+    WarlocksText: "Warlocks:",
+    ShardsRemainingText: (x) => `${x} shards`,
 };
 buildLocale(translations, "enUS", true);

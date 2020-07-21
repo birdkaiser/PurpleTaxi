@@ -58,10 +58,16 @@ class ServiceUi {
     startService() {
         this.inService = true;
         this.updateGui();
+
+        const soulShardsRemaining = GetItemCount("Soul Shard", false);
+
+        // Determine nearby clickers
+
+
         this.notifyServiceAvailable({
             realZoneText: this.realZoneText,
             subZoneText: this.subZoneText,
-            soulShardsRemaining: 45, // TODO
+            soulShardsRemaining,
         });
     }
 
@@ -162,15 +168,15 @@ class MainWindowState {
         }
 
         const destinationsHeading = AceGUI.Create("Heading");
-        mainWindowFrame.AddChild(destinationsHeading);
         destinationsHeading.SetFullWidth(true);
         destinationsHeading.SetText(L.DestinationsHeadingText);
+        mainWindowFrame.AddChild(destinationsHeading);
 
         const destinationsGroup = AceGUI.Create("SimpleGroup");
-        mainWindowFrame.AddChild(destinationsGroup);
         destinationsGroup.SetFullWidth(true);
         destinationsGroup.SetFullHeight(true);
         destinationsGroup.SetLayout("List");
+        mainWindowFrame.AddChild(destinationsGroup);
         this.destinationsContainer = destinationsGroup;
 
         this.destinations = {};
@@ -185,43 +191,94 @@ class MainWindowState {
         this.destinationsContainer.ReleaseChildren();
 
         for (const destinationName in destinations) {
-            const inlineGroup = AceGUI.Create("InlineGroup");
-            this.destinationsContainer.AddChild(inlineGroup);
-            inlineGroup.SetFullWidth(true);
-            inlineGroup.SetLayout("List");
+            const destinationContainer = AceGUI.Create("InlineGroup");
+            destinationContainer.SetFullWidth(true);
+            destinationContainer.SetLayout("List");
+            this.destinationsContainer.AddChild(destinationContainer);
 
-            const label = AceGUI.Create("Label");
-            inlineGroup.AddChild(label);
-            label.SetFullWidth(true);
-            label.SetText(destinationName);
+            const destinationLabel = AceGUI.Create("Label");
+            destinationLabel.SetFullWidth(true);
+            destinationLabel.SetText(destinationName);
+            destinationContainer.AddChild(destinationLabel);
+
+            const detailsContainer = AceGUI.Create("SimpleGroup");
+            detailsContainer.SetFullWidth(true);
+            detailsContainer.SetLayout("Flow");
+            destinationContainer.AddChild(detailsContainer);
+
+            const warlocksLabel = AceGUI.Create("Label");
+            warlocksLabel.SetWidth(100);
+            warlocksLabel.SetText(L.WarlocksText);
+            detailsContainer.AddChild(warlocksLabel);
+
+            const destination = destinations[destinationName];
+            const warlockNamesText =
+                destination.warlocks
+                    .map(w => `${w.characterName} (${L.ShardsRemainingText(w.soulShardsRemaining)})`)
+                    .reduce((p, n) => p === "" ? n : `${p}, ${n}`, "");
+
+            const namesLabel = AceGUI.Create("Label");
+            namesLabel.SetColor(200, 0, 200);
+            namesLabel.SetRelativeWidth(0.5);
+            namesLabel.SetText(warlockNamesText);
+            detailsContainer.AddChild(namesLabel);
         }
     }
 }
 
 export interface StateOptions {
+    readonly rangeChecker: RangeCheckerFn;
     readonly dispatchMessage: DispatchMessageFn;
     readonly debug: DebugFn;
 }
 
 export class State {
+    private readonly characterName: string;
+    private readonly dispatchMessage: DispatchMessageFn;
+    private readonly debug: DebugFn;
     private mainWindowState: MainWindowState | null = null;
-    private options: StateOptions;
+    private rangeChecker: RangeCheckerFn;
     private isWarlockWithSummonSpell: boolean;
-    private characterName: string;
-    private debug: DebugFn;
     private summonersInService: { [k in string]: Summoner; };
 
     constructor(options: StateOptions) {
-        this.options = options;
-
         // The player's class won't change, so we can discover this once on initialization.
         const [, englishClass] = UnitClass("player");
         this.characterName = GetUnitName("player", false);
 
         this.isWarlockWithSummonSpell = (englishClass == "WARLOCK" && UnitLevel("player") >= 20);
 
+        this.dispatchMessage = options.dispatchMessage;
         this.debug = options.debug;
+        this.rangeChecker = options.rangeChecker;
         this.summonersInService = {};
+
+        if (this.isWarlockWithSummonSpell) {
+            this.startWarlockTicker();
+        }
+    }
+
+    public startWarlockTicker() {
+        const { characterName, rangeChecker } = this;
+        C_Timer.NewTicker(10, () => {
+            try {
+                const clickersInRange = [];
+                let i = 0;
+                while (i < 40) {
+                    const [raidMemberName, _rank, _grp, _level, _class, _fileName, _zone, isOnline, isDead] = GetRaidRosterInfo(i + 1);
+                    if (!raidMemberName) {
+                        break;
+                    }
+
+                    if (raidMemberName !== characterName && isOnline && !isDead && rangeChecker(`raid${i+1}`)) {
+                        clickersInRange.push(characterName);
+                    }
+                    i++;
+                }
+            } catch (x) {
+                this.debug(x);
+            }
+        });
     }
 
     public toggleMainWindow() {
@@ -235,7 +292,7 @@ export class State {
                 },
                 isWarlockWithSummonSpell: this.isWarlockWithSummonSpell,
                 notifyServiceAvailable: (notice: ServiceAvailabilityNotice) => {
-                    this.options.dispatchMessage(["GUILD"], {
+                    this.dispatchMessage(["GUILD"], {
                         type: "serviceAvailable",
                         characterName: this.characterName,
                         realZoneText: notice.realZoneText,
@@ -244,7 +301,7 @@ export class State {
                     });
                 },
                 notifyServiceStopped: () => {
-                    this.options.dispatchMessage(["GUILD"], {
+                    this.dispatchMessage(["GUILD"], {
                         type: "serviceStopped",
                         characterName: this.characterName,
                     });
@@ -333,5 +390,9 @@ export class State {
 
             this.mainWindowState.updateDestinations(destinations);
         }
+    }
+
+    private updateRange() {
+
     }
 }

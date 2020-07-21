@@ -15,4 +15,6 @@ interface PurpleTaxiTranslationKeys {
     CurrentlyServicing: (zone: string, subZone: string) => string;
     NotInService: string;
     DestinationsHeadingText: string;
+    WarlocksText: string;
+    ShardsRemainingText: (shards: number) => string;
 }
