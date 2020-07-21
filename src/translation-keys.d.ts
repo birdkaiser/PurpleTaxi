@@ -16,5 +16,7 @@ interface PurpleTaxiTranslationKeys {
     NotInService: string;
     DestinationsHeadingText: string;
     WarlocksText: string;
+    ClickersText: string;
     ShardsRemainingText: (shards: number) => string;
+    RequestSummonButtonText: string;
 }

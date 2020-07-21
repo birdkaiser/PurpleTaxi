@@ -1,6 +1,6 @@
 type RangeCheckerFn = (this: void, unit: string) => boolean;
 
 interface LibRangeCheckLibStub {
-    RegisterCallback: (this: void, obj: any, eventName: string, methodName: string) => void;
+    RegisterCallback: <T>(this: void, obj: T, eventName: string, methodName: string) => void;
     GetFriendMaxChecker(yards: number): RangeCheckerFn;
 }

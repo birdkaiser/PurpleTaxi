@@ -1,6 +1,5 @@
-import * as wow from "@wartoshika/wow-classic-declarations";
 import "./Locales/enUS";
-import { State } from "./state";
+import { State } from "./State";
 import { Message, MessageDistribution } from "./messages";
 
 interface ExtendedAddon {
@@ -9,29 +8,42 @@ interface ExtendedAddon {
     OnCommReceived(arg1: string, arg2: string, arg3: string, arg4: string, arg5: string): void;
     ProcessSlashCommand(input: string): void;
     Debug(str: string): void;
-    RangeCheckersChanged(): void;
 }
 
 type PurpleTaxiAddon = AceAddon & ExtendedAddon & AceCommLibStub & AceSerializerLibStub & LibRangeCheckLibStub;
 
-const MessagePrefix: string = "PTAXI";
-const debugMode: boolean = true; // TODO: store this in config.
+const MessagePrefix = "PTAXI";
+const debugMode = true; // TODO: store this in config.
+
+print("0");
 
 let PurpleTaxi: PurpleTaxiAddon | null = null;
 try {
     const addon = LibStub("AceAddon-3.0").NewAddon("PurpleTaxi", "AceConsole-3.0", "AceComm-3.0", "AceSerializer-3.0") as PurpleTaxiAddon;
     PurpleTaxi = addon;
+
+    print("1");
     
     const L = LibStub("AceLocale-3.0").GetLocale<PurpleTaxiTranslationKeys>("PurpleTaxi", true);
+    const AceGUI = LibStub("AceGUI-3.0");
     const RC = LibStub("LibRangeCheck-2.0");
+
+    
+    print("2");
     
     addon.state = new State({
+        AceGUI,
+        L,
         dispatchMessage: (distribution: MessageDistribution, msg: Message) => {
             addon.SendComm(distribution, msg);
         },
-        rangeChecker: RC.GetFriendMaxChecker(30),
+        rangeChecker: RC.GetFriendMaxChecker(40),
         debug: (msg) => addon.Debug(msg),
     });
+
+    const executeHelp = function() {
+        print(L.OptionHelpPrint);
+    };
     
     const options: GroupOption = {
         name: "PurpleTaxi",
@@ -47,18 +59,10 @@ try {
         },
     };
 
-    function executeHelp() {
-        print(L.OptionHelpPrint);
-    }
-
     PurpleTaxi.Debug = function(str: string) {
         if (debugMode) {
             this.Print(str);
         }
-    }
-
-    PurpleTaxi.RangeCheckersChanged = function() {
-        this.Debug("Range checkers changed.");
     }
 
     PurpleTaxi.SendComm = function(distribution: MessageDistribution, msg: Message) {
@@ -88,11 +92,11 @@ try {
             }
 
             this.Debug(`Received message from ${sender} over ${channel}: ${message}`);
-            const [success, deserialized] = this.Deserialize(message);
+            const [success, deserialized] = this.Deserialize<Message>(message);
             if (success) {
                 const messageObj = deserialized as Message;
                 if (!this.state.handleMessage(messageObj)) {
-                    this.Debug(`Unhandled message type: ${deserialized.type}`);
+                    this.Debug(`Unhandled message type: ${messageObj.type}`);
                 }
             } else {
                 this.Debug(`Failed to deserialize message: ${deserialized}`);

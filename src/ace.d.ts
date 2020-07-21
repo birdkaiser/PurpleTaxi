@@ -47,9 +47,9 @@ declare class AceGuiWidgetBase {
     IsVisible(): boolean;
     IsShown(): boolean;
     Release(): void;
-    SetPoint(...args: any[]): void; // TODO: figure out parameters
+    //SetPoint(...args: any[]): void; // TODO: figure out parameters
     GetNumPoints(): number;
-    GetPoint(): any; // TODO: figure out parameters and return type
+    //GetPoint(): any; // TODO: figure out parameters and return type
     ClearAllPoints(): void;
     GetUserDataTable(): { readonly [k in string]: unknown };
     SetUserData<T>(key: string, val: T): void;
@@ -103,7 +103,7 @@ declare class GuiIcon extends AceGuiWidgetBase {
     SetImage(path: string): void; // TODO: There are more parameters to describe the image
     SetImageSize(width: number, height: number): void;
     SetLabel(text: string): void;
-    SetCallback(name: "OnClick", fn: (button: any) => void): void; // TODO: what is the button?
+    //SetCallback(name: "OnClick", fn: (button: any) => void): void; // TODO: what is the button?
     SetCallback(name: "OnEnter", fn: () => void): void;
     SetCallback(name: "OnLeave", fn: () => void): void;
 }
@@ -116,12 +116,12 @@ declare class GuiKeybinding extends AceGuiWidgetBase {
     // TODO
 }
 
-type Font = any; // TODO: figure this out
+//type Font = any; // TODO: figure this out
 declare class GuiLabel extends AceGuiWidgetBase {
     SetText(text: string): void;
     SetColor(r: number, g: number, b: number): void;
-    SetFont(font: Font, height: number, flags: any): void; // TODO: check these parameters
-    SetFontObject(font: Font): void;
+    //SetFont(font: Font, height: number, flags: any): void; // TODO: check these parameters
+    //SetFontObject(font: Font): void;
     SetImage(path: string): void; // TODO: There are more parameters to describe the image
     SetImageSize(width: number, height: number): void;
 }
@@ -152,7 +152,7 @@ declare class GuiDropdownGroup extends AceGuiContainerWidgetBase {
 declare class GuiFrame extends AceGuiContainerWidgetBase {
     SetTitle(text: string): void;
     SetStatusText(text: string): void;
-    SetStatusTable(table: any): void;
+    //SetStatusTable(table: any): void;
     ApplyStatus(): void;
     SetCallback(name: "OnClose", fn: () => void): void;
     SetCallback(name: "OnEnterStatusBar", fn: () => void): void;
@@ -165,7 +165,7 @@ declare class GuiInlineGroup extends AceGuiContainerWidgetBase {
 
 declare class GuiScrollFrame extends AceGuiContainerWidgetBase {
     SetScroll(val: number): void;
-    SetStatusTable(table: any): void;
+    //SetStatusTable(table: any): void;
 }
 
 declare class GuiSimpleGroup extends AceGuiContainerWidgetBase {
@@ -362,6 +362,6 @@ declare class AceConfigRegistryLibStub {
 
 declare class AceSerializerLibStub {
     /** @tupleReturn */
-    Deserialize(str: string): [boolean, any];
+    Deserialize<T>(str: string): [boolean, string | T];
     Serialize(val: unknown): string;
 }

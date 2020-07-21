@@ -5,7 +5,11 @@
       "moduleResolution": "node",
       "types": [],
       "strict": true,
-      "rootDir": "src"
+      "rootDir": "src",
+      "typeRoots": [
+        "./node_modules/@types",
+        "./node_modules/@wartoshika/wow-classic-declarations"
+    ]
     },
     "tstl": {
       "luaTarget": "JIT",

@@ -1,4 +1,4 @@
-import buildLocale from "../build-locale";
+import buildLocale from "../buildLocale";
 
 const translations: PurpleTaxiTranslationKeys = {
     Language: "English",
@@ -17,6 +17,8 @@ const translations: PurpleTaxiTranslationKeys = {
     NotInService: "You are not currently servicing summon requests.",
     DestinationsHeadingText: "Destinations",
     WarlocksText: "Warlocks:",
+    ClickersText: "Clickers:",
     ShardsRemainingText: (x) => `${x} shards`,
+    RequestSummonButtonText: "Request Summon",
 };
 buildLocale(translations, "enUS", true);

@@ -4,6 +4,7 @@ export interface ServiceAvailableMessage {
     readonly realZoneText: string;
     readonly subZoneText: string;
     readonly soulShardsRemaining: number;
+    readonly clickers: ReadonlyArray<string>;
 }
 
 export interface ServiceStoppedMessage {
