@@ -31,3 +31,6 @@ declare function GetRealZoneText(): string;
 
 /// https://wow.gamepedia.com/API_GetSubZoneText
 declare function GetSubZoneText(): string;
+
+/// https://wow.gamepedia.com/API_UnitIsGroupLeader
+declare function UnitIsGroupLeader(this: void, unitName: string): boolean;

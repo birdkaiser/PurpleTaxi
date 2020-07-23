@@ -28,6 +28,7 @@ export class State {
     private warlocksInService: { [k in string]: Warlock; };
     private nearbyClickerNames: ReadonlyArray<string>;
     private isInService: boolean;
+    private leaderName: string;
 
     constructor(options: StateOptions) {
         // The player's class won't change, so we can discover this once on initialization.
@@ -44,6 +45,13 @@ export class State {
         this.warlocksInService = {};
         this.nearbyClickerNames = [];
         this.isInService = false;
+        this.leaderName = this.characterName;
+
+        const f = CreateFrame("Frame");
+        f.RegisterEvent("PARTY_LEADER_CHANGED");
+        f.SetScript("OnEvent", () => { this.debug("party leader changed"); });
+
+        this.updateLeaderName();
 
         if (this.isWarlockWithSummonSpell) {
             this.startWarlockTicker();
@@ -53,8 +61,8 @@ export class State {
     public startWarlockTicker(): void {
         C_Timer.NewTicker(10, () => {
             try {
-                if (this.updateNearbyClickers()) {
-                    this.sendServiceAvailabilityNotification();
+                if (this.isInService) {
+                    this.updateNearbyClickers();
                 }
             } catch (x) {
                 this.debug(x);
@@ -77,7 +85,6 @@ export class State {
                 startService: () => {
                     this.isInService = true;
                     this.updateNearbyClickers();
-                    this.sendServiceAvailabilityNotification();
                 },
                 stopService: () => {
                     this.isInService = false;
@@ -102,16 +109,33 @@ export class State {
         return true;
     }
 
-    private updateNearbyClickers(): boolean {
+    private updateLeaderName(): void {
+        let i = 0;
+        while (i < 40) {
+            const [raidMemberName] = GetRaidRosterInfo(i + 1);
+            if (!raidMemberName) {
+                break;
+            }
+            if (UnitIsGroupLeader(`raid${i+1}`)) {
+                this.leaderName = raidMemberName;
+                return;
+            }
+
+            i++;
+        }
+
+        this.leaderName = this.characterName; // We couldn't find an actual leader, so default it to this character's name.
+    }
+
+    private updateNearbyClickers(): void {
         if (!this.isInService) {
-            return false;
+            return;
         }
 
         const { characterName, rangeChecker } = this;
         const clickersInRange: string[] = [];
         let i = 0;
         let clickersHaveChanged = false;
-        this.debug(`I am ${characterName}.`);
         while (i < 40) {
             const [raidMemberName, /* rank */, /* grp */, /* level */, /* klass */, /* fileName */, /* zone */, isOnline, isDead] = GetRaidRosterInfo(i + 1);
             if (!raidMemberName) {
@@ -139,11 +163,9 @@ export class State {
         this.debug(`clickers in range: ${clickersInRange.reduce((p, n) => p === "" ? n : `${p}, ${n}`, "")}`);
 
         if (clickersHaveChanged) {
-            this.debug("updating clickers in range");
             this.nearbyClickerNames = clickersInRange;
         }
-
-        return clickersHaveChanged;
+        this.sendServiceAvailabilityNotification();
     }
 
     private sendServiceAvailabilityNotification(): void {
@@ -164,6 +186,7 @@ export class State {
             characterName: this.characterName,
             realZoneText: args.realZoneText,
             subZoneText: args.subZoneText,
+            leaderName: this.leaderName,
             soulShardsRemaining: args.soulShardsRemaining,
             clickers: this.nearbyClickerNames,
         });
@@ -183,11 +206,18 @@ export class State {
                 nearbyClickers: msg.clickers,
             };
             this.updateSummonersUi();
-        } else if (warlock.realZoneText !== msg.realZoneText || warlock.subZoneText !== msg.subZoneText || warlock.soulShardsRemaining !== msg.soulShardsRemaining) {
+        } else if (
+            warlock.realZoneText !== msg.realZoneText ||
+            warlock.subZoneText !== msg.subZoneText ||
+            warlock.soulShardsRemaining !== msg.soulShardsRemaining ||
+            msg.clickers.some(c => !warlock.nearbyClickers.includes(c)) ||
+            warlock.nearbyClickers.some(c => !msg.clickers.includes(c))
+        ) {
             // The warlocks properties, such as their location or shards, have updated. Update the UI.
             warlock.realZoneText = msg.realZoneText;
             warlock.subZoneText = msg.subZoneText;
             warlock.soulShardsRemaining = msg.soulShardsRemaining;
+            warlock.nearbyClickers = msg.clickers;
 
             this.updateSummonersUi();
         }

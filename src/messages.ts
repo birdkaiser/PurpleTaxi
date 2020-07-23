@@ -1,6 +1,7 @@
 export interface ServiceAvailableMessage {
     readonly type: "serviceAvailable"
     readonly characterName: string;
+    readonly leaderName: string;
     readonly realZoneText: string;
     readonly subZoneText: string;
     readonly soulShardsRemaining: number;
