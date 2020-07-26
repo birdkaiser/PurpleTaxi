@@ -360,6 +360,21 @@ declare class AceConfigRegistryLibStub {
     RegisterOptionsTable(addonName: string, table: GroupOption): void;
 }
 
+interface AceDb<TProfile> {
+    readonly char: TProfile;
+    readonly realm: TProfile;
+    readonly class: TProfile;
+    readonly race: TProfile;
+    readonly faction: TProfile;
+    readonly factionrealm: TProfile;
+    readonly global: TProfile;
+    readonly profile: TProfile;
+}
+
+declare class AceDbLibStub {
+    New<TProfile>(dbname: string, defaults?: TProfile, defaultProfile?: string | true): AceDb<TProfile>;
+}
+
 declare class AceSerializerLibStub {
     /** @tupleReturn */
     Deserialize<T>(str: string): [boolean, string | T];

@@ -1,8 +1,12 @@
 import { DispatchMessageFn, Message, ServiceAvailableMessage, ServiceStoppedMessage } from "./messages";
 import { MainWindow } from "./GUI/MainWindow";
-import { DebugFn, Destination, Warlock } from "./types";
+import { DebugFn, Destination, Warlock, PurpleTaxiDb } from "./types";
+import { PartyMonitor } from "./PartyMonitor";
+import { ListedParty } from "./ListedParty";
+import { getRaidLeadership } from "./PartyUtils";
 
 export interface StateOptions {
+    readonly DB: AceDb<PurpleTaxiDb>;
     readonly L: PurpleTaxiTranslationKeys;
     readonly AceGUI: AceGuiLibStub;
     readonly rangeChecker: RangeCheckerFn;
@@ -17,11 +21,13 @@ interface DispatchServiceAvailabilityNotificationArgs {
 }
 
 export class State {
+    private readonly DB: AceDb<PurpleTaxiDb>;
     private readonly L: PurpleTaxiTranslationKeys;
     private readonly AceGUI: AceGuiLibStub;
     private readonly characterName: string;
     private readonly dispatchMessage: DispatchMessageFn;
     private readonly debug: DebugFn;
+    private readonly partyMonitor: PartyMonitor;
     private mainWindow: MainWindow | null = null;
     private rangeChecker: RangeCheckerFn;
     private isWarlockWithSummonSpell: boolean;
@@ -29,27 +35,41 @@ export class State {
     private nearbyClickerNames: ReadonlyArray<string>;
     private isInService: boolean;
     private leaderName: string;
+    private partyGuid: string | null;
+    private listedParty: ListedParty | null;
 
     constructor(options: StateOptions) {
+        const { debug } = options;
+
         // The player's class won't change, so we can discover this once on initialization.
         const [, englishClass] = UnitClass("player");
         this.characterName = GetUnitName("player", false);
 
         this.isWarlockWithSummonSpell = englishClass == "WARLOCK" && UnitLevel("player") >= 20;
 
+        this.DB = options.DB;
         this.AceGUI = options.AceGUI;
         this.L = options.L;
         this.dispatchMessage = options.dispatchMessage;
-        this.debug = options.debug;
+        this.debug = debug;
         this.rangeChecker = options.rangeChecker;
         this.warlocksInService = {};
         this.nearbyClickerNames = [];
         this.isInService = false;
         this.leaderName = this.characterName;
+        this.partyMonitor = new PartyMonitor({ debug });
+        this.partyGuid = null;
+        this.listedParty = null;
 
         const f = CreateFrame("Frame");
-        f.RegisterEvent("PARTY_LEADER_CHANGED");
-        f.SetScript("OnEvent", () => { this.debug("party leader changed"); });
+        f.RegisterEvent("GROUP_JOINED");
+        f.SetScript("OnEvent", (_frame, eventName, ...eventArgs: unknown[]) => {
+            if (eventName === "GROUP_JOINED") {
+                const partyGuid = eventArgs[1] as string;
+                this.partyGuid = partyGuid;
+                this.debug(`party joined: ${eventArgs[0]}, ${eventArgs[1]}`);
+            }
+        });
 
         this.updateLeaderName();
 
@@ -72,9 +92,10 @@ export class State {
 
     public toggleMainWindow(): void {
         if (this.mainWindow) {
-            this.mainWindow.releaseMainWindow();
+            this.mainWindow.destroy();
         } else {
             this.mainWindow = new MainWindow({
+                partyMonitor: this.partyMonitor,
                 AceGUI: this.AceGUI,
                 L: this.L,
                 debug: this.debug,
@@ -103,10 +124,67 @@ export class State {
             this.handleServiceAvailableMessage(msg);
         } else if (msg.type === "serviceStopped") {
             this.handleServiceStoppedMessage(msg);
+        } else if (msg.type === "partyListed") {
+            this.partyMonitor.handlePartyListedMessage(msg);
+        } else if (msg.type === "partyDelisted") {
+            this.partyMonitor.handlePartyDelistedMessage(msg);
         } else {
             return false;
         }
         return true;
+    }
+
+    public listParty(): void {
+        if (!IsInGroup("LE_PARTY_CATEGORY_HOME")) {
+            print("You cannot list your group because you are not currently in one.");
+            return;
+
+        }
+
+        const { characterName, partyGuid } = this;
+        if (!partyGuid) {
+            print("Cannot list this party as the ID is unknown. Try leaving the group and re-joining.");
+            return;
+        }
+
+        const leadership = getRaidLeadership();
+        if (leadership.leaderName !== characterName && !leadership.assistantNames.includes(characterName)) {
+            print("Cannot list this party as you are not the party leader or assistant.");
+            return;
+        }
+
+        const listedParty = new ListedParty({
+            partyGuid
+        });
+        this.listedParty = listedParty;
+
+        this.dispatchMessage(["GUILD"], {
+            type: "partyListed",
+            partyGuid,
+            leaderName: leadership.leaderName,
+            description: "",
+            assistantNames: leadership.assistantNames,
+            summonDestinations: [],
+        });
+    }
+
+    public delistParty(): void {
+        const { characterName, partyGuid } = this;
+        if (!partyGuid) {
+            print("Cannot list this party as the ID is unknown. Try leaving the group and re-joining.");
+            return;
+        }
+
+        const leadership = getRaidLeadership();
+        if (leadership.leaderName !== characterName && !leadership.assistantNames.includes(characterName)) {
+            print("Cannot delist this party as you are not the party leader or assistant.");
+            return;
+        }
+
+        this.dispatchMessage(["GUILD"], {
+            type: "partyDelisted",
+            partyGuid,
+        });
     }
 
     private updateLeaderName(): void {

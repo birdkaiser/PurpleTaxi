@@ -1,6 +1,7 @@
 import "./Locales/enUS";
 import { State } from "./State";
 import { Message, MessageDistribution } from "./messages";
+import { PurpleTaxiDb } from "./types";
 
 interface ExtendedAddon {
     state: State;
@@ -12,15 +13,16 @@ interface ExtendedAddon {
 
 type PurpleTaxiAddon = AceAddon & ExtendedAddon & AceCommLibStub & AceSerializerLibStub & LibRangeCheckLibStub;
 
+const AddonName = "PurpleTaxi";
 const MessagePrefix = "PTAXI";
 const debugMode = true; // TODO: store this in config.
 
 let PurpleTaxi: PurpleTaxiAddon | null = null;
 try {
-    const addon = LibStub("AceAddon-3.0").NewAddon("PurpleTaxi", "AceConsole-3.0", "AceComm-3.0", "AceSerializer-3.0") as PurpleTaxiAddon;
+    const addon = LibStub("AceAddon-3.0").NewAddon(AddonName, "AceConsole-3.0", "AceComm-3.0", "AceSerializer-3.0") as PurpleTaxiAddon;
     PurpleTaxi = addon;
     
-    const L = LibStub("AceLocale-3.0").GetLocale<PurpleTaxiTranslationKeys>("PurpleTaxi", true);
+    const L = LibStub("AceLocale-3.0").GetLocale<PurpleTaxiTranslationKeys>(AddonName, true);
     const AceGUI = LibStub("AceGUI-3.0");
     const RC = LibStub("LibRangeCheck-2.0");
 
@@ -33,7 +35,7 @@ try {
     PurpleTaxi.SendComm = function(distribution: MessageDistribution, msg: Message) {
         try {
             const serialized = this.Serialize(msg);
-            this.Debug(`Sending message: ${serialized}`);
+            //this.Debug(`Sending message: ${serialized}`);
             if (serialized === "") {
                 // Blizzard will disconnect you if you try to send an empty message.
                 return;
@@ -49,14 +51,14 @@ try {
         }
     }
 
-    PurpleTaxi.OnCommReceived = function(prefix: string, message: string, channel: string, sender: string) {
+    PurpleTaxi.OnCommReceived = function(prefix: string, message: string /*, channel: string, sender: string */) {
         try {
             if (prefix !== MessagePrefix) {
                 // Ignore anything that doesn't match our prefix.
                 return;
             }
 
-            this.Debug(`Received message from ${sender} over ${channel}: ${message}`);
+            //this.Debug(`Received message from ${sender} over ${channel}: ${message}`);
             const [success, deserialized] = this.Deserialize<Message>(message);
             if (success) {
                 const messageObj = deserialized as Message;
@@ -85,31 +87,50 @@ try {
 
     PurpleTaxi.OnInitialize = function() {
         try {
+            const DB = LibStub("AceDB-3.0").New<PurpleTaxiDb>(AddonName);
+
             this.state = new State({
                 AceGUI,
                 L,
+                DB,
                 dispatchMessage: (distribution: MessageDistribution, msg: Message) => {
                     this.SendComm(distribution, msg);
                 },
                 rangeChecker: RC.GetFriendMaxChecker(30),
                 debug: (msg) => this.Debug(msg),
             });
-    
-            const executeHelp = function() {
-                print(L.OptionHelpPrint);
-            };
-            
+
             const options: GroupOption = {
-                name: "PurpleTaxi",
+                name: AddonName,
                 type: "group",
                 args: {
                     help: {
                         type: "execute",
                         name: L.OptionHelpName,
                         desc: L.OptionHelpDesc,
-                        func: executeHelp,
+                        func: () => {
+                            print(L.OptionHelpPrint);
+                        },
                         guiHidden: true,
                     },
+                    list: {
+                        type: "execute",
+                        name: L.OptionListName,
+                        desc: L.OptionListDesc,
+                        func: () => {
+                            this.state.listParty();
+                        },
+                        guiHidden: true,
+                    },
+                    delist: {
+                        type: "execute",
+                        name: L.OptionDelistName,
+                        desc: L.OptionDelistDesc,
+                        func: () => {
+                            this.state.delistParty();
+                        },
+                        guiHidden: true,
+                    }
                 },
             };
 
@@ -121,11 +142,11 @@ try {
             this.Debug(x);
         }
     };
-    
+
     PurpleTaxi.OnEnable = function() {
         try {
-            const version = GetAddOnMetadata("PurpleTaxi", "Version") || "";
-            const author = GetAddOnMetadata("PurpleTaxi", "Author") || "";
+            const version = GetAddOnMetadata(AddonName, "Version") || "";
+            const author = GetAddOnMetadata(AddonName, "Author") || "";
             this.Print(L.AddonEnabled(version, author));
         } catch (x) {
             this.Debug(x);
@@ -139,10 +160,6 @@ try {
             this.Debug(x);
         }
     };
-    
-    if (debugMode) {
-        print("Loaded PurpleTaxi script.");
-    }
 } catch (x) {
     if (debugMode) {
         print(x);

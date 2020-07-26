@@ -3,6 +3,7 @@
 ## Notes: Lets you find warlocks that are providing summoning services and request a summon from them.
 ## Author: Birdkaiser
 ## Version: 0.1
+## SavedVariables: PurpleTaxi
 
 Embeds.xml
 PurpleTaxi.lua

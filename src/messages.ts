@@ -13,9 +13,25 @@ export interface ServiceStoppedMessage {
     readonly characterName: string;
 }
 
+export interface PartyListedMessage {
+    readonly type: "partyListed";
+    readonly partyGuid: string;
+    readonly leaderName: string;
+    readonly description: string;
+    readonly assistantNames: ReadonlyArray<string>;
+    readonly summonDestinations: ReadonlyArray<string>;
+}
+
+export interface PartyDelistedMessage {
+    readonly type: "partyDelisted";
+    readonly partyGuid: string;
+}
+
 export type Message =
     | ServiceAvailableMessage
-    | ServiceStoppedMessage;
+    | ServiceStoppedMessage
+    | PartyListedMessage
+    | PartyDelistedMessage;
 
 export type MessageDistribution =
     | [AddonChannelId]

@@ -27,10 +27,17 @@ type RaidRosterInfo = [RaidMemberName, RaidMemberRank, RaidMemberSubGroup, RaidM
 declare function GetRaidRosterInfo(this: void, raidIndex: number): RaidRosterInfo;
 
 /// https://wow.gamepedia.com/API_GetRealZoneText
-declare function GetRealZoneText(): string;
+declare function GetRealZoneText(this: void): string;
+
+/// https://wow.gamepedia.com/API_GetServerTime
+declare function GetServerTime(this: void): number;
 
 /// https://wow.gamepedia.com/API_GetSubZoneText
-declare function GetSubZoneText(): string;
+declare function GetSubZoneText(this: void): string;
+
+/// https://wow.gamepedia.com/API_IsInGroup
+type GroupType = "LE_PARTY_CATEGORY_HOME" | "LE_PARTY_CATEGORY_INSTANCE";
+declare function IsInGroup(this: void, groupType?: GroupType): boolean;
 
 /// https://wow.gamepedia.com/API_UnitIsGroupLeader
 declare function UnitIsGroupLeader(this: void, unitName: string): boolean;

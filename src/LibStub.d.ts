@@ -1,6 +1,7 @@
 type LibStubName =
     | "AceAddon-3.0"
     | "AceComm-3.0"
+    | "AceDB-3.0"
     | "AceLocale-3.0"
     | "AceGUI-3.0"
     | "AceConfigCmd-3.0"
@@ -11,6 +12,7 @@ type LibStubName =
 declare const LibStub: <T extends LibStubName>(this: void, name: T) =>
     T extends "AceAddon-3.0" ? AceAddonLibStub :
     T extends "AceComm-3.0" ? AceCommLibStub :
+    T extends "AceDB-3.0" ? AceDbLibStub :
     T extends "AceLocale-3.0" ? AceLocaleLibStub :
     T extends "AceGUI-3.0" ? AceGuiLibStub :
     T extends "AceConfigCmd-3.0" ? AceConfigCmdLibStub :

@@ -25,3 +25,7 @@ export interface Destination {
     warlocks: DestinationWarlock[];
     clickers: DestinationClicker[];
 }
+
+export interface PurpleTaxiDb {
+    partyGuid: string | null;
+}
